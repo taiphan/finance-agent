@@ -12,7 +12,7 @@ import { runPipeline } from '@/lib/pipeline-executor'
 import { saveAnalysis, DEFAULT_SUBJECTS, isStale } from '@/lib/analysis-store'
 import { getState } from '@/lib/pipeline-store'
 
-export const maxDuration = 300  // 5 min — Vercel Pro; reduce to 60 for Hobby
+export const maxDuration = 60  // Vercel Hobby max; Pro supports 300
 
 // Protect with a secret so random callers can't spam AI calls
 function isAuthorized(req: NextRequest): boolean {
