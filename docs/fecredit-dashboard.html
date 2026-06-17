@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FE Credit — Finance Dashboard 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --red: #f85149; --yellow: #d29922;
+    --blue: #58a6ff; --orange: #f0883e; --purple: #bc8cff;
+    --green-dim: rgba(63,185,80,.15); --red-dim: rgba(248,81,73,.15);
+    --yellow-dim: rgba(210,153,34,.15); --blue-dim: rgba(88,166,255,.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size: 14px; line-height: 1.6; }
+  a { color: var(--blue); text-decoration: none; }
+
+  /* NAV */
+  nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+  nav .logo { font-size: 18px; font-weight: 700; color: var(--orange); }
+  nav .badge { background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; padding: 3px 12px; font-size: 12px; color: var(--muted); }
+  nav .rating { margin-left: auto; background: var(--yellow-dim); border: 1px solid var(--yellow); color: var(--yellow); border-radius: 20px; padding: 3px 14px; font-size: 13px; font-weight: 600; }
+  nav .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  nav .pill { padding: 2px 10px; border-radius: 12px; font-size: 11px; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); cursor: pointer; transition: all .2s; }
+  nav .pill:hover { border-color: var(--blue); color: var(--blue); }
+
+  /* LAYOUT */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+  .full { grid-column: 1 / -1; }
+  @media(max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+
+  /* CARD */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-title { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .card-title .icon { font-size: 14px; }
+
+  /* KPI */
+  .kpi { text-align: center; }
+  .kpi .val { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .kpi .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .kpi .chg { font-size: 13px; font-weight: 600; margin-top: 6px; padding: 2px 10px; border-radius: 12px; display: inline-block; }
+  .up { color: var(--green); background: var(--green-dim); }
+  .dn { color: var(--red); background: var(--red-dim); }
+  .neu { color: var(--yellow); background: var(--yellow-dim); }
+
+  /* SECTION HEADER */
+  .section-header { display: flex; align-items: center; gap: 10px; margin: 32px 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .section-header .num { background: var(--blue); color: #fff; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .section-header h2 { font-size: 16px; font-weight: 600; }
+  .section-header .skill-tag { margin-left: auto; background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 2px 10px; font-size: 11px; color: var(--muted); font-family: monospace; }
+
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; height: 260px; }
+  .chart-wrap-lg { position: relative; height: 320px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  td { padding: 9px 10px; border-bottom: 1px solid rgba(48,54,61,.5); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+
+  /* SIGNAL */
+  .signal-card { border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; border: 1px solid; }
+  .signal-green { background: var(--green-dim); border-color: var(--green); }
+  .signal-yellow { background: var(--yellow-dim); border-color: var(--yellow); }
+  .signal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .signal-title { font-weight: 600; font-size: 13px; }
+  .signal-score { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 12px; }
+  .score-green { background: var(--green-dim); color: var(--green); }
+  .score-yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .signal-evidence { font-size: 12px; color: var(--muted); }
+  .ev-item { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; }
+  .ev-pos { color: var(--green); }
+  .ev-neg { color: var(--red); }
+
+  /* SENTIMENT BAR */
+  .sent-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .sent-label { width: 160px; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .sent-bar-wrap { flex: 1; background: var(--bg3); border-radius: 6px; height: 20px; position: relative; overflow: hidden; }
+  .sent-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 700; transition: width .6s ease; }
+  .sent-score { width: 50px; text-align: right; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+
+  /* NEWS */
+  .news-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(48,54,61,.4); }
+  .news-item:last-child { border-bottom: none; }
+  .news-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+  .news-text { font-size: 13px; line-height: 1.5; }
+  .news-tag { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* PIPELINE */
+  .pipeline { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 16px; background: var(--bg3); border-radius: 10px; margin-bottom: 24px; }
+  .pipe-step { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font-size: 12px; font-family: monospace; color: var(--blue); }
+  .pipe-arrow { color: var(--muted); font-size: 12px; }
+
+  /* DONUT CENTER TEXT */
+  .donut-wrap { position: relative; }
+  .donut-label { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+  .donut-label .big { font-size: 22px; font-weight: 700; }
+  .donut-label .small { font-size: 11px; color: var(--muted); }
+
+  /* FORECAST TABLE */
+  .fc-table { width: 100%; border-collapse: collapse; }
+  .fc-table th { background: var(--bg3); padding: 10px 14px; text-align: center; font-size: 12px; color: var(--muted); border: 1px solid var(--border); }
+  .fc-table td { padding: 10px 14px; text-align: center; border: 1px solid var(--border); font-size: 13px; }
+  .bull { color: var(--green); font-weight: 600; }
+  .base { color: var(--blue); font-weight: 600; }
+  .bear { color: var(--red); font-weight: 600; }
+
+  /* SCORECARD */
+  .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .score-label { width: 150px; font-size: 13px; flex-shrink: 0; }
+  .score-bar-wrap { flex: 1; background: var(--bg3); border-radius: 6px; height: 22px; overflow: hidden; position: relative; }
+  .score-bar { height: 100%; border-radius: 6px; display: flex; align-items: center; padding-left: 10px; font-size: 12px; font-weight: 700; color: #fff; transition: width .7s ease; }
+  .score-num { width: 40px; text-align: right; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+
+  /* RISK MATRIX */
+  .risk-row { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; background: var(--bg3); }
+  .risk-label { flex: 1; font-size: 13px; }
+  .risk-prob { font-size: 12px; color: var(--muted); width: 40px; text-align: center; }
+  .risk-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .rb-red { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .rb-yellow { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+
+  /* FOOTER */
+  footer { border-top: 1px solid var(--border); padding: 20px 24px; text-align: center; color: var(--muted); font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚡ FE CREDIT</span>
+  <span class="badge">VPBank SMBC Finance Co.</span>
+  <div class="pills">
+    <span class="pill">alphaear-news</span>
+    <span class="pill">alphaear-stock</span>
+    <span class="pill">alphaear-sentiment</span>
+    <span class="pill">alphaear-predictor</span>
+    <span class="pill">signal-tracker</span>
+    <span class="pill">logic-visualizer</span>
+    <span class="pill">financial-analyst</span>
+    <span class="pill">investment-advisor</span>
+    <span class="pill">alphaear-reporter</span>
+  </div>
+  <span class="rating">⚠ WATCH / SPEC BUY</span>
+</nav>
+
+<div class="container">
+
+  <!-- PIPELINE -->
+  <div class="pipeline" style="margin-top:24px;">
+    <span style="font-size:11px;color:var(--muted);margin-right:4px;">PIPELINE:</span>
+    <span class="pipe-step">alphaear-search</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">alphaear-news</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">alphaear-stock</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">alphaear-sentiment</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">alphaear-predictor</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">signal-tracker</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">logic-visualizer</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">financial-analyst</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">investment-advisor</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">alphaear-reporter</span>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="grid-4">
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">🏦</span> Thị phần dư nợ</div>
+      <div class="val" style="color:var(--orange)">~45%</div>
+      <div class="sub">Consumer finance VN</div>
+      <div class="chg dn">↓ vs 55% (2021)</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">📈</span> LNTT Q3/2024</div>
+      <div class="val" style="color:var(--green)">+270 tỷ</div>
+      <div class="sub">VND — Lãi trở lại</div>
+      <div class="chg up">↑ từ +145 tỷ (Q2)</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">⚠</span> NPL Ratio</div>
+      <div class="val" style="color:var(--red)">~12–15%</div>
+      <div class="sub">Ước tính 9T/2024</div>
+      <div class="chg up">↓ từ ~18% (2023)</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">💰</span> Định giá ước tính</div>
+      <div class="val" style="color:var(--blue)">$0.8–1.2B</div>
+      <div class="sub">USD — 2025E</div>
+      <div class="chg dn">↓ vs $2.8B (2021)</div>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">👥</span> Khách hàng</div>
+      <div class="val" style="color:var(--purple)">10M+</div>
+      <div class="sub">63 tỉnh thành</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">🏪</span> Điểm bán (POS)</div>
+      <div class="val" style="color:var(--blue)">18.000+</div>
+      <div class="sub">Toàn quốc</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">🎭</span> Sentiment Score</div>
+      <div class="val" style="color:var(--yellow)">+0.32</div>
+      <div class="sub">Tích cực thận trọng</div>
+      <div class="chg up">↑ từ -0.13</div>
+    </div>
+    <div class="card kpi">
+      <div class="card-title"><span class="icon">🏥</span> Health Score</div>
+      <div class="val" style="color:var(--yellow)">6/10</div>
+      <div class="sub">Phục hồi, chưa bền vững</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: FINANCIAL DATA + PIE -->
+  <div class="section-header">
+    <div class="num">1</div>
+    <h2>📊 Dữ Liệu Tài Chính Lịch Sử</h2>
+    <span class="skill-tag">alphaear-stock · financial-analyst</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> Doanh Thu Lãi & Lợi Nhuận (tỷ VND)</div>
+      <div class="chart-wrap-lg"><canvas id="chartRevenue"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">💳</span> Tổng Dư Nợ & Thị Phần</div>
+      <div class="chart-wrap-lg"><canvas id="chartLoan"></canvas></div>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title"><span class="icon">🥧</span> Cơ Cấu Doanh Thu</div>
+      <div style="position:relative;height:200px;" class="donut-wrap">
+        <canvas id="chartRevMix"></canvas>
+        <div class="donut-label"><div class="big" style="color:var(--orange)">100%</div><div class="small">Doanh thu</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🥧</span> Cơ Cấu Chi Phí (% doanh thu)</div>
+      <div style="position:relative;height:200px;" class="donut-wrap">
+        <canvas id="chartCostMix"></canvas>
+        <div class="donut-label"><div class="big" style="color:var(--red)">108%</div><div class="small">Đỉnh 2023</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🏆</span> Định Giá: 2021 → 2025E</div>
+      <div style="position:relative;height:200px;"><canvas id="chartValuation"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: SENTIMENT -->
+  <div class="section-header">
+    <div class="num">2</div>
+    <h2>🎭 Phân Tích Cảm Xúc Thị Trường</h2>
+    <span class="skill-tag">alphaear-sentiment</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📡</span> Điểm Sentiment Theo Nguồn</div>
+      <div style="margin-top:8px;">
+        <div class="sent-row">
+          <div class="sent-label">Báo chí tài chính VN</div>
+          <div class="sent-bar-wrap"><div class="sent-bar" style="width:70%;background:var(--green);">+0.40</div></div>
+          <div class="sent-score" style="color:var(--green)">+0.40</div>
+        </div>
+        <div class="sent-row">
+          <div class="sent-label">Nhà đầu tư / Analyst</div>
+          <div class="sent-bar-wrap"><div class="sent-bar" style="width:60%;background:var(--green);">+0.35</div></div>
+          <div class="sent-score" style="color:var(--green)">+0.35</div>
+        </div>
+        <div class="sent-row">
+          <div class="sent-label">Prediction market</div>
+          <div class="sent-bar-wrap"><div class="sent-bar" style="width:72%;background:var(--blue);">+0.45</div></div>
+          <div class="sent-score" style="color:var(--blue)">+0.45</div>
+        </div>
+        <div class="sent-row">
+          <div class="sent-label">Regulatory / NHNN</div>
+          <div class="sent-bar-wrap"><div class="sent-bar" style="width:45%;background:var(--yellow);">+0.20</div></div>
+          <div class="sent-score" style="color:var(--yellow)">+0.20</div>
+        </div>
+        <div class="sent-row">
+          <div class="sent-label">Mạng xã hội (người vay)</div>
+          <div class="sent-bar-wrap"><div class="sent-bar" style="width:22%;background:var(--red);">-0.15</div></div>
+          <div class="sent-score" style="color:var(--red)">-0.15</div>
+        </div>
+        <div style="margin-top:14px;padding:12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--muted);">
+          💡 <strong style="color:var(--text)">Tín hiệu contrarian:</strong> Brand sentiment người vay âm trong khi tổng thể dương → thương hiệu phục hồi chậm hơn kết quả tài chính.
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">📈</span> Diễn Biến Sentiment Theo Thời Gian</div>
+      <div class="chart-wrap"><canvas id="chartSentiment"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: PREDICTOR + RATIOS -->
+  <div class="section-header">
+    <div class="num">3</div>
+    <h2>📈 Dự Báo & Tỷ Số Tài Chính</h2>
+    <span class="skill-tag">alphaear-predictor · financial-analyst</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">🔮</span> Dự Báo LNTT 2024E–2026E (tỷ VND)</div>
+      <div class="chart-wrap-lg"><canvas id="chartForecast"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">📐</span> Tỷ Số Tài Chính vs Benchmark</div>
+      <div class="chart-wrap-lg"><canvas id="chartRatios"></canvas></div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> Bảng Dự Báo Chi Tiết</div>
+      <table class="fc-table">
+        <thead><tr><th>Kịch bản</th><th>2024E</th><th>2025E</th><th>2026E</th></tr></thead>
+        <tbody>
+          <tr><td>🐂 Bull</td><td class="bull">+600</td><td class="bull">+2.500</td><td class="bull">+4.500</td></tr>
+          <tr><td>📊 Base</td><td class="base">+300</td><td class="base">+1.200</td><td class="base">+2.800</td></tr>
+          <tr><td>🐻 Bear</td><td class="bear">+100</td><td class="bear">+400</td><td class="bear">+1.000</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:8px;font-size:12px;">
+        <strong style="color:var(--blue)">Khoảng tin cậy 80% (Base 2025E):</strong><br>
+        <span style="color:var(--text)">600 tỷ → 2.000 tỷ VND</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🏗️</span> DCF Valuation Breakdown (tỷ VND)</div>
+      <div style="position:relative;height:200px;"><canvas id="chartDCF"></canvas></div>
+      <div style="margin-top:10px;padding:10px;background:var(--green-dim);border:1px solid var(--green);border-radius:8px;font-size:12px;">
+        <strong style="color:var(--green)">Enterprise Value: ~19.500 tỷ VND (~$770M)</strong><br>
+        <span style="color:var(--muted)">Discount 72% vs đỉnh $2,8B (2021) | WACC: 14%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: SIGNAL TRACKER + SCORECARD -->
+  <div class="section-header">
+    <div class="num">4</div>
+    <h2>📡 Signal Tracker & Financial Health</h2>
+    <span class="skill-tag">signal-tracker · financial-analyst</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📡</span> Investment Signal Tracker</div>
+      <div class="signal-card signal-green">
+        <div class="signal-header">
+          <div class="signal-title">🟢 RECOVERY thesis — "FE Credit đã qua đáy"</div>
+          <div class="signal-score score-green">7/10 — Strengthening</div>
+        </div>
+        <div class="signal-evidence">
+          <div class="ev-item"><span class="ev-pos">✅</span><span>Q2/2024 lãi +145 tỷ · Q3/2024 tăng +270 tỷ</span></div>
+          <div class="ev-item"><span class="ev-pos">✅</span><span>VPBank hợp nhất lãi kỷ lục 2025 (30.625 tỷ)</span></div>
+          <div class="ev-item"><span class="ev-pos">✅</span><span>Finacle cloud live · PCI DSS 4.0 Level 1</span></div>
+          <div class="ev-item"><span class="ev-neg">❌</span><span>Lỗ luỹ kế 9T/2024 vẫn -437 tỷ</span></div>
+          <div class="ev-item"><span class="ev-neg">❌</span><span>Brand sentiment người vay còn âm</span></div>
+        </div>
+      </div>
+      <div class="signal-card signal-yellow">
+        <div class="signal-header">
+          <div class="signal-title">🟡 COMPETITION thesis — "Mất thị phần dài hạn"</div>
+          <div class="signal-score score-yellow">5/10 — Watch</div>
+        </div>
+        <div class="signal-evidence">
+          <div class="ev-item"><span class="ev-pos">✅</span><span>Home Credit (SCBX) nguồn lực mới · BNPL CAGR 58%</span></div>
+          <div class="ev-item"><span class="ev-neg">❌</span><span>18.000+ POS khó replicate · 10M khách hàng data moat</span></div>
+        </div>
+      </div>
+      <div class="signal-card signal-green">
+        <div class="signal-header">
+          <div class="signal-title">🟢 DIGITAL thesis — "Finacle cloud game-changer"</div>
+          <div class="signal-score score-green">6/10 — Emerging</div>
+        </div>
+        <div class="signal-evidence">
+          <div class="ev-item"><span class="ev-pos">✅</span><span>First NBFI VN trên public cloud</span></div>
+          <div class="ev-item"><span class="ev-neg">❌</span><span>Chưa có OPEX data sau migration để confirm</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">🏥</span> /financial-health Scorecard</div>
+      <div style="margin-top:8px;">
+        <div class="score-row">
+          <div class="score-label">Chất lượng tài sản</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:40%;background:var(--red);">4/10</div></div>
+          <div class="score-num" style="color:var(--red)">4</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Khả năng sinh lợi</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:50%;background:var(--yellow);">5/10</div></div>
+          <div class="score-num" style="color:var(--yellow)">5</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Tăng trưởng</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:50%;background:var(--yellow);">5/10</div></div>
+          <div class="score-num" style="color:var(--yellow)">5</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Vị thế cạnh tranh</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:70%;background:var(--blue);">7/10</div></div>
+          <div class="score-num" style="color:var(--blue)">7</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Chuyển đổi số</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:80%;background:var(--green);">8/10</div></div>
+          <div class="score-num" style="color:var(--green)">8</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label">Cổ đông / Quản trị</div>
+          <div class="score-bar-wrap"><div class="score-bar" style="width:70%;background:var(--blue);">7/10</div></div>
+          <div class="score-num" style="color:var(--blue)">7</div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px;">
+          <div class="score-row">
+            <div class="score-label" style="font-weight:700;color:var(--text)">⭐ Tổng thể</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:60%;background:var(--yellow);font-size:13px;font-weight:800;">6/10 — Phục hồi thận trọng</div></div>
+            <div class="score-num" style="color:var(--yellow);font-size:18px;">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: NEWS + RISK -->
+  <div class="section-header">
+    <div class="num">5</div>
+    <h2>📰 Tin Tức & Phân Tích Rủi Ro</h2>
+    <span class="skill-tag">alphaear-news · investment-advisor</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">📰</span> Tin Tức Thị Trường — Q2/2026</div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--green)"></div>
+        <div><div class="news-text">VPBank lãi kỷ lục 2025: >30.625 tỷ đồng (+53% YoY), FE Credit đóng góp tích cực</div><div class="news-tag">🟢 Tích cực · VPBank BCTC 2025</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--green)"></div>
+        <div><div class="news-text">FE Credit "đi ngược gió" xe máy: triển khai gói 0% lãi suất, chiếm thị phần</div><div class="news-tag">🟢 Tích cực · vietnam.vn 05/2025</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--green)"></div>
+        <div><div class="news-text">BNPL VN tăng 36,5% lên $2,61B (2025) — TAM mở rộng cho FE Credit</div><div class="news-tag">🟢 Tích cực · Yahoo Finance</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--green)"></div>
+        <div><div class="news-text">Finacle SaaS live — first NBFI VN trên public cloud · PCI DSS 4.0 L1 (07/2024)</div><div class="news-tag">🟢 Tích cực · Finacle/FPT IS</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--red)"></div>
+        <div><div class="news-text">Home Credit đổi chủ: SCBX Thái Lan mua 100% (~20.973 tỷ VND) — đối thủ mạnh hơn</div><div class="news-tag">🔴 Rủi ro · The Nation Thailand</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--red)"></div>
+        <div><div class="news-text">NPL ẩn ngành: Alvarez & Marsal cảnh báo tổng nợ xấu thực tế cao hơn báo cáo</div><div class="news-tag">🔴 Rủi ro · A&M 07/2025</div></div>
+      </div>
+      <div class="news-item">
+        <div class="news-dot" style="background:var(--yellow)"></div>
+        <div><div class="news-text">SBV rate 4,5% (2025), credit growth 9,9% YoY — môi trường vĩ mô hỗ trợ</div><div class="news-tag">⚪ Trung lập · ainvest.com</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">⚠</span> Ma Trận Rủi Ro</div>
+      <div class="risk-row">
+        <div class="risk-label">🔴 NPL tái bùng phát (kinh tế chậm)</div>
+        <div class="risk-prob">25%</div>
+        <div class="risk-badge rb-red">HIGH</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-label">🔴 NHNN siết trần lãi suất tiêu dùng</div>
+        <div class="risk-prob">30%</div>
+        <div class="risk-badge rb-red">HIGH</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-label">🟡 Cạnh tranh BNPL/digital erode margins</div>
+        <div class="risk-prob">40%</div>
+        <div class="risk-badge rb-yellow">MEDIUM</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-label">🟡 Brand scandal tái diễn (debt collection)</div>
+        <div class="risk-prob">20%</div>
+        <div class="risk-badge rb-yellow">MEDIUM</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-label">🟡 SMBC–VPBank xung đột chiến lược</div>
+        <div class="risk-prob">15%</div>
+        <div class="risk-badge rb-yellow">LOW-MED</div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="card-title"><span class="icon">💥</span> Stress Test</div>
+        <div style="padding:10px;background:var(--red-dim);border:1px solid var(--red);border-radius:8px;font-size:12px;margin-bottom:8px;">
+          <strong style="color:var(--red)">Nếu NPL tăng +5pp:</strong> chi phí dự phòng tăng ~5.000 tỷ → <strong>xóa sạch lợi nhuận 2025E</strong>
+        </div>
+        <div style="padding:10px;background:var(--yellow-dim);border:1px solid var(--yellow);border-radius:8px;font-size:12px;">
+          <strong style="color:var(--yellow)">Nếu doanh thu giảm 20%:</strong> lợi nhuận mỏng → có thể tái lỗ nếu OPEX chưa giảm đủ
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 6: PEER + IRR + CATALYSTS -->
+  <div class="section-header">
+    <div class="num">6</div>
+    <h2>🏆 So Sánh Ngành & Luận Điểm Đầu Tư</h2>
+    <span class="skill-tag">investment-advisor · alphaear-reporter</span>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span class="icon">🏆</span> Peer Comparison — Consumer Finance VN</div>
+      <div class="chart-wrap"><canvas id="chartPeer"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="icon">💹</span> ROI / IRR Scenarios (3 năm, từ $800M)</div>
+      <div class="chart-wrap"><canvas id="chartIRR"></canvas></div>
+    </div>
+  </div>
+  <div class="card full" style="margin-bottom:20px;">
+    <div class="card-title"><span class="icon">🚦</span> 3 Catalysts Quan Trọng Cần Theo Dõi</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:8px;">
+      <div style="padding:16px;background:var(--green-dim);border:1px solid var(--green);border-radius:10px;">
+        <div style="font-size:24px;margin-bottom:6px;">1️⃣</div>
+        <div style="font-weight:700;color:var(--green);margin-bottom:4px;">NPL về &lt;10%</div>
+        <div style="font-size:12px;color:var(--muted);">Timeline: Q2/2025</div>
+        <div style="font-size:13px;margin-top:8px;">Re-rating mạnh từ thị trường, credibility được phục hồi. Đây là trigger quan trọng nhất.</div>
+      </div>
+      <div style="padding:16px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:10px;">
+        <div style="font-size:24px;margin-bottom:6px;">2️⃣</div>
+        <div style="font-weight:700;color:var(--blue);margin-bottom:4px;">4 quý lãi liên tiếp</div>
+        <div style="font-size:12px;color:var(--muted);">Timeline: Q3/2025</div>
+        <div style="font-size:13px;margin-top:8px;">Xác nhận phục hồi bền vững → mở cửa cho IPO FE Credit độc lập.</div>
+      </div>
+      <div style="padding:16px;background:var(--yellow-dim);border:1px solid var(--yellow);border-radius:10px;">
+        <div style="font-size:24px;margin-bottom:6px;">3️⃣</div>
+        <div style="font-weight:700;color:var(--yellow);margin-bottom:4px;">Cost-to-Income &lt;60%</div>
+        <div style="font-size:12px;color:var(--muted);">Timeline: Cuối 2025</div>
+        <div style="font-size:13px;margin-top:8px;">OPEX giảm nhờ Finacle cloud → mở rộng biên lợi nhuận, leverage NIM cao.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 7: FINAL DASHBOARD -->
+  <div class="section-header">
+    <div class="num">7</div>
+    <h2>📋 Dashboard Tổng Hợp 11 Skills</h2>
+    <span class="skill-tag">alphaear-reporter</span>
+  </div>
+  <div class="card full">
+    <div class="card-title"><span class="icon">📊</span> Kết Quả Tổng Hợp Pipeline</div>
+    <table>
+      <thead><tr><th>#</th><th>Skill</th><th>Kết quả chính</th><th>Signal</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>alphaear-search</code></td><td>Thu thập 14 nguồn dữ liệu công khai (VPBank BCTC, VnExpress, Finacle, FPT IS...)</td><td style="color:var(--blue)">✅ Done</td></tr>
+        <tr><td>2</td><td><code>alphaear-news</code></td><td>VPBank lãi kỷ lục 2025; BNPL bùng nổ; Home Credit đổi chủ; NIM bị nén</td><td style="color:var(--green)">🟢 Tích cực</td></tr>
+        <tr><td>3</td><td><code>alphaear-stock</code></td><td>Dư nợ ~66.000 tỷ (2020 peak); Q2/Q3 2024 lãi trở lại; định giá $0.8–1.2B</td><td style="color:var(--yellow)">🟡 Phục hồi</td></tr>
+        <tr><td>4</td><td><code>alphaear-sentiment</code></td><td>+0.32 (tích cực thận trọng); brand lag vs financials; momentum tăng từ -0.50</td><td style="color:var(--yellow)">🟡 Thận trọng</td></tr>
+        <tr><td>5</td><td><code>alphaear-predictor</code></td><td>Base 2025E: +1.200 tỷ | Bull: +2.500 tỷ | Bear: +400 tỷ; CI80%: [600–2.000 tỷ]</td><td style="color:var(--green)">🟢 Tích cực</td></tr>
+        <tr><td>6</td><td><code>alphaear-signal-tracker</code></td><td>Recovery 🟢 7/10 Strengthening · Competition 🟡 5/10 Watch · Digital 🟢 6/10</td><td style="color:var(--green)">🟢 Mua</td></tr>
+        <tr><td>7</td><td><code>alphaear-logic-visualizer</code></td><td>Sơ đồ: COVID→NPL→Lỗ→Cải tổ→Phục hồi; Hệ sinh thái VPBank-FEC-SMBC</td><td style="color:var(--green)">🟢 Rõ ràng</td></tr>
+        <tr><td>8</td><td><code>financial-analyst</code></td><td>NIM tốt 15–18%; Cost of Risk cao 8–10%; DCF EV ~$770M; Health 6/10</td><td style="color:var(--yellow)">🟡 Thận trọng</td></tr>
+        <tr><td>9</td><td><code>saas-metrics-coach</code></td><td style="color:var(--muted)">N/A — FE Credit không phải mô hình subscription</td><td style="color:var(--muted)">⛔ Skip</td></tr>
+        <tr><td>10</td><td><code>business-investment-advisor</code></td><td>WATCH/Spec Buy; IRR 26% base; MOIC 2.5x; NPL là key risk; không IPO sớm</td><td style="color:var(--yellow)">🟡 Thận trọng</td></tr>
+        <tr><td>11</td><td><code>alphaear-reporter</code></td><td>Báo cáo 448-line MD + HTML dashboard; Rating 6/10; 3 catalysts xác định</td><td style="color:var(--green)">✅ Hoàn tất</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    ⚠ Không phải tư vấn đầu tư chuyên nghiệp. Dữ liệu từ nguồn công khai, chưa kiểm toán tại cấp VPB FC.<br>
+    Tạo bởi 11 Finance Skills AI Agent Pipeline · 16/06/2026
+  </footer>
+
+</div><!-- end container -->
+
+<script>
+const C = Chart;
+const GRID = { color: 'rgba(48,54,61,0.8)' };
+const FONT = { color: '#8b949e', size: 11 };
+const defaults = { responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 }, boxWidth: 12 } } },
+  scales: { x: { grid: GRID, ticks: FONT }, y: { grid: GRID, ticks: FONT } }
+};
+
+// 1. REVENUE + PROFIT
+new C(document.getElementById('chartRevenue'), { type: 'bar',
+  data: { labels: ['2019','2020','2021','2022','2023','Q2-Q3/24'],
+    datasets: [
+      { label: 'Doanh thu lãi (tỷ)', data: [15000,18200,19000,14000,22000,10664],
+        backgroundColor: 'rgba(88,166,255,0.7)', borderRadius: 4 },
+      { label: 'LNTT (tỷ)', data: [2800,3700,2500,-3000,-1000,270],
+        backgroundColor: (ctx) => ctx.raw < 0 ? 'rgba(248,81,73,0.8)' : 'rgba(63,185,80,0.8)',
+        borderRadius: 4, type: 'bar' }
+    ]
+  },
+  options: { ...defaults, plugins: { ...defaults.plugins,
+    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() + ' tỷ' } }
+  }}
+});
+
+// 2. LOAN OUTSTANDING + MARKET SHARE
+new C(document.getElementById('chartLoan'), {
+  data: { labels: ['2019','2020','2021','2022','2023','2024E'],
+    datasets: [
+      { type: 'bar', label: 'Tổng dư nợ (tỷ)', data: [55000,66000,68000,52000,48000,52000],
+        backgroundColor: 'rgba(240,136,62,0.7)', borderRadius: 4, yAxisID: 'y' },
+      { type: 'line', label: 'Thị phần (%)', data: [50,55,55,48,45,45],
+        borderColor: '#bc8cff', backgroundColor: 'rgba(188,140,255,0.15)',
+        tension: 0.4, pointRadius: 4, fill: true, yAxisID: 'y1' }
+    ]
+  },
+  options: { ...defaults, scales: {
+    x: { grid: GRID, ticks: FONT },
+    y: { grid: GRID, ticks: { ...FONT, callback: v => v.toLocaleString() }, position: 'left' },
+    y1: { grid: { display: false }, ticks: { ...FONT, callback: v => v + '%' }, position: 'right', min: 30, max: 70 }
+  }}
+});
+
+// 3. REVENUE MIX DONUT
+new C(document.getElementById('chartRevMix'), { type: 'doughnut',
+  data: { labels: ['Thu nhập lãi cho vay','Phí & Bảo hiểm','Khác'],
+    datasets: [{ data: [85,10,5], backgroundColor: ['#f0883e','#58a6ff','#bc8cff'], borderColor: '#161b22', borderWidth: 3 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 10 }, boxWidth: 10 } } }
+  }
+});
+
+// 4. COST MIX DONUT
+new C(document.getElementById('chartCostMix'), { type: 'doughnut',
+  data: { labels: ['Chi phí lãi','OPEX','Dự phòng rủi ro'],
+    datasets: [{ data: [18,35,55], backgroundColor: ['#d29922','#f85149','#ff6b6b'], borderColor: '#161b22', borderWidth: 3 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: { legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 10 }, boxWidth: 10 } } }
+  }
+});
+
+// 5. VALUATION
+new C(document.getElementById('chartValuation'), { type: 'bar',
+  data: { labels: ['2021\n(Đỉnh SMFG)','2023\n(Đáy)','2025E\n(Phục hồi)','2028E\n(Bull)'],
+    datasets: [{ label: 'Định giá ($B USD)', data: [2.8, 0.5, 1.0, 2.0],
+      backgroundColor: ['#3fb950','#f85149','#d29922','#58a6ff'], borderRadius: 6 }]
+  },
+  options: { ...defaults, plugins: { ...defaults.plugins,
+    tooltip: { callbacks: { label: ctx => '$' + ctx.raw + 'B USD' } }
+  }, scales: { ...defaults.scales, y: { ...defaults.scales?.y, ticks: { ...FONT, callback: v => '$'+v+'B' } } }}
+});
+
+// 6. SENTIMENT TIMELINE
+new C(document.getElementById('chartSentiment'), { type: 'line',
+  data: { labels: ['Q1/22','Q2/22','Q3/22','Q4/22','Q1/23','Q2/23','Q3/23','Q4/23','Q1/24','Q2/24','Q3/24','Q4/24','Q1/25','Q2/26'],
+    datasets: [{ label: 'Sentiment Score', data: [0.10,-0.10,-0.30,-0.45,-0.40,-0.45,-0.50,-0.40,-0.20,-0.05,0.15,0.22,0.28,0.32],
+      borderColor: '#f0883e', backgroundColor: 'rgba(240,136,62,0.15)', tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#f0883e' },
+      { label: 'Ngưỡng trung lập', data: Array(14).fill(0), borderColor: '#30363d', borderDash: [5,5], pointRadius: 0, borderWidth: 1 }
+    ]
+  },
+  options: { ...defaults, scales: { x: { grid: GRID, ticks: FONT }, y: { grid: GRID, ticks: FONT, min: -0.7, max: 0.6 } } }
+});
+
+// 7. FORECAST
+new C(document.getElementById('chartForecast'), { type: 'bar',
+  data: { labels: ['2024E','2025E','2026E'],
+    datasets: [
+      { label: '🐂 Bull', data: [600,2500,4500], backgroundColor: 'rgba(63,185,80,0.8)', borderRadius: 4 },
+      { label: '📊 Base', data: [300,1200,2800], backgroundColor: 'rgba(88,166,255,0.8)', borderRadius: 4 },
+      { label: '🐻 Bear', data: [100,400,1000], backgroundColor: 'rgba(248,81,73,0.8)', borderRadius: 4 }
+    ]
+  },
+  options: { ...defaults, plugins: { ...defaults.plugins },
+    scales: { x: { grid: GRID, ticks: FONT }, y: { grid: GRID, ticks: { ...FONT, callback: v => v.toLocaleString() + ' tỷ' } } }
+  }
+});
+
+// 8. RATIOS RADAR
+new C(document.getElementById('chartRatios'), { type: 'radar',
+  data: { labels: ['NIM','ROA','Tăng trưởng\ndư nợ','Cost-to-\nIncome','NPL\n(inverted)','Provision\nCoverage'],
+    datasets: [
+      { label: 'FE Credit 9T/2024', data: [85,25,40,35,30,70],
+        borderColor: '#f0883e', backgroundColor: 'rgba(240,136,62,0.2)', pointBackgroundColor: '#f0883e' },
+      { label: 'Benchmark tốt', data: [75,60,80,70,90,85],
+        borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', pointBackgroundColor: '#3fb950', borderDash: [5,5] }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false,
+    scales: { r: { grid: { color: 'rgba(48,54,61,0.8)' }, ticks: { display: false, stepSize: 20 },
+      pointLabels: { color: '#8b949e', font: { size: 10 } }, min: 0, max: 100 } },
+    plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 }, boxWidth: 12 } } }
+  }
+});
+
+// 9. DCF BAR
+new C(document.getElementById('chartDCF'), { type: 'bar',
+  data: { labels: ['PV FCF Năm 1-5','PV FCF Năm 6-10','Terminal Value (PV)'],
+    datasets: [{ label: 'Giá trị (tỷ VND)', data: [4200,5800,9500],
+      backgroundColor: ['rgba(88,166,255,0.8)','rgba(63,185,80,0.8)','rgba(188,140,255,0.8)'],
+      borderRadius: 6 }]
+  },
+  options: { ...defaults, indexAxis: 'y',
+    scales: { x: { grid: GRID, ticks: { ...FONT, callback: v => v.toLocaleString() } }, y: { grid: GRID, ticks: FONT } }
+  }
+});
+
+// 10. PEER COMPARISON
+new C(document.getElementById('chartPeer'), { type: 'bar',
+  data: { labels: ['FE Credit','Home Credit VN','MCredit (MB)','Shinhan Finance','F88'],
+    datasets: [
+      { label: 'Thị phần (%)', data: [45,20,8,5,2],
+        backgroundColor: ['#f0883e','#58a6ff','#3fb950','#d29922','#bc8cff'], borderRadius: 4 }
+    ]
+  },
+  options: { ...defaults,
+    scales: { x: { grid: GRID, ticks: FONT }, y: { grid: GRID, ticks: { ...FONT, callback: v => v + '%' } } }
+  }
+});
+
+// 11. IRR SCENARIOS
+new C(document.getElementById('chartIRR'), { type: 'bar',
+  data: { labels: ['🐂 Bull\n($2.8B exit)','📊 Base\n($2.0B exit)','🐻 Bear\n($0.6B exit)'],
+    datasets: [
+      { label: 'MOIC (x)', data: [3.5, 2.5, 0.75], backgroundColor: ['rgba(63,185,80,0.8)','rgba(88,166,255,0.8)','rgba(248,81,73,0.8)'], borderRadius: 4, yAxisID: 'y' },
+      { label: 'IRR (%/năm)', data: [52, 26, -9], backgroundColor: ['rgba(63,185,80,0.3)','rgba(88,166,255,0.3)','rgba(248,81,73,0.3)'],
+        borderColor: ['#3fb950','#58a6ff','#f85149'], borderWidth: 2, borderRadius: 4, yAxisID: 'y1', type: 'line', pointRadius: 6 }
+    ]
+  },
+  options: { ...defaults, scales: {
+    x: { grid: GRID, ticks: FONT },
+    y: { grid: GRID, ticks: { ...FONT, callback: v => v+'x' }, position: 'left' },
+    y1: { grid: { display: false }, ticks: { ...FONT, callback: v => v+'%' }, position: 'right', min: -20, max: 70 }
+  }}
+});
+</script>
+</body>
+</html>

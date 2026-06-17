@@ -1,0 +1,59 @@
+name: Refresh AI Analysis
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 8am Vietnam time (UTC+7)
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+    inputs:
+      force:
+        description: 'Force refresh all (ignore stale check)'
+        type: boolean
+        default: false
+      subjects:
+        description: 'Comma-separated subjects (leave empty for defaults)'
+        required: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Trigger analysis refresh
+        env:
+          APP_URL: ${{ secrets.APP_URL }}          # e.g. https://finance-agent.vercel.app
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          FORCE="${{ github.event.inputs.force || 'false' }}"
+          SUBJECTS="${{ github.event.inputs.subjects }}"
+
+          # Build payload
+          if [ -n "$SUBJECTS" ]; then
+            PAYLOAD=$(jq -n --argjson force "$FORCE" \
+              --argjson subjects "$(echo $SUBJECTS | jq -R 'split(",")')" \
+              '{force: $force, subjects: $subjects}')
+          else
+            PAYLOAD=$(jq -n --argjson force "$FORCE" '{force: $force}')
+          fi
+
+          echo "Payload: $PAYLOAD"
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST "$APP_URL/api/cron/refresh" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Refresh failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          REFRESHED=$(echo "$BODY" | jq -r '.refreshed // 0')
+          ERRORS=$(echo "$BODY" | jq -r '.errors // 0')
+          echo "✅ Refreshed: $REFRESHED | Errors: $ERRORS"
